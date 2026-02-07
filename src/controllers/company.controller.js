@@ -1,0 +1,286 @@
+const prisma = require('../config/database');
+const { success, error, notFound } = require('../utils/response');
+const { getMediaForModel } = require('../services/media.service');
+const { getPaginationParams } = require('../utils/pagination');
+
+const formatCompanyListItem = async (company, userId = null) => {
+  const media = await getMediaForModel('App\\Models\\Company', company.id, 'profile_pic');
+
+  // Check if favorited
+  let isFavorite = false;
+  if (userId) {
+    const fav = await prisma.company_user.findFirst({
+      where: { company_id: company.id, user_id: userId },
+    });
+    isFavorite = !!fav;
+  }
+
+  return {
+    id: Number(company.id),
+    name: company.name,
+    slug: company.slug,
+    moto: company.moto,
+    tags: company.tags,
+    about: company.about,
+    manpower: company.manpower,
+    view_count: company.view_count,
+    is_active: company.is_active,
+    status: company.status,
+    profile_pic_url: media.length > 0 ? media[0].url : null,
+    thumbnail_url: media.length > 0 ? media[0].url : null,
+    is_favorite: isFavorite,
+    location: company.locations
+      ? {
+          id: Number(company.locations.id),
+          name: company.locations.name,
+          country_code: company.locations.country_code,
+          flag_path: company.locations.flag_path,
+        }
+      : null,
+    business_category: company.business_categories
+      ? { id: Number(company.business_categories.id), name: company.business_categories.name }
+      : null,
+    business_categories: company.company_business_categories
+      ? company.company_business_categories.map((cbc) => ({
+          id: Number(cbc.business_categories.id),
+          name: cbc.business_categories.name,
+        }))
+      : [],
+    business_types: company.company_business_types
+      ? company.company_business_types.map((cbt) => ({
+          id: Number(cbt.business_types.id),
+          name: cbt.business_types.name,
+        }))
+      : [],
+    certificates: company.company_certificates
+      ? company.company_certificates.map((cc) => ({
+          id: Number(cc.certificates.id),
+          name: cc.certificates.name,
+        }))
+      : [],
+  };
+};
+
+const companyList = async (req, res, next) => {
+  try {
+    const { page, perPage } = getPaginationParams(req.query);
+    const { keyword, locationId, businessCategoryIds, businessTypeIds, certificateIds, manpower } = req.body;
+
+    const where = { is_active: true, deleted_at: null };
+
+    if (keyword) {
+      where.OR = [
+        { name: { contains: keyword } },
+        { moto: { contains: keyword } },
+        { tags: { contains: keyword } },
+        { about: { contains: keyword } },
+        { keywords: { contains: keyword } },
+      ];
+    }
+
+    if (locationId) where.location_id = BigInt(locationId);
+
+    if (businessCategoryIds && businessCategoryIds.length > 0) {
+      where.company_business_categories = {
+        some: { business_category_id: { in: businessCategoryIds.map(BigInt) } },
+      };
+    }
+
+    if (businessTypeIds && businessTypeIds.length > 0) {
+      where.company_business_types = {
+        some: { business_type_id: { in: businessTypeIds.map(BigInt) } },
+      };
+    }
+
+    if (certificateIds && certificateIds.length > 0) {
+      where.company_certificates = {
+        some: { certificate_id: { in: certificateIds.map(BigInt) } },
+      };
+    }
+
+    if (manpower && manpower.length > 0) {
+      where.manpower = { in: manpower };
+    }
+
+    const [companies, total] = await Promise.all([
+      prisma.companies.findMany({
+        where,
+        include: {
+          locations: true,
+          business_categories: true,
+          company_business_categories: { include: { business_categories: true } },
+          company_business_types: { include: { business_types: true } },
+          company_certificates: { include: { certificates: true } },
+        },
+        orderBy: { created_at: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+      }),
+      prisma.companies.count({ where }),
+    ]);
+
+    const userId = req.user?.id || null;
+    const result = await Promise.all(companies.map((c) => formatCompanyListItem(c, userId)));
+
+    return success(res, {
+      data: result,
+      pagination: {
+        current_page: page,
+        last_page: Math.ceil(total / perPage),
+        total,
+        per_page: perPage,
+      },
+    }, 'Companies fetched successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getFilterOptions = async (req, res, next) => {
+  try {
+    const [locations, businessCategories, businessTypes, certificates] = await Promise.all([
+      prisma.locations.findMany({ orderBy: { name: 'asc' } }),
+      prisma.business_categories.findMany({ where: { deleted_at: null }, orderBy: { name: 'asc' } }),
+      prisma.business_types.findMany({ orderBy: { name: 'asc' } }),
+      prisma.certificates.findMany({ orderBy: { name: 'asc' } }),
+    ]);
+
+    return success(res, {
+      locations: locations.map((l) => ({ id: Number(l.id), name: l.name, country_code: l.country_code, flag_path: l.flag_path })),
+      business_categories: businessCategories.map((bc) => ({ id: Number(bc.id), name: bc.name })),
+      business_types: businessTypes.map((bt) => ({ id: Number(bt.id), name: bt.name })),
+      certificates: certificates.map((c) => ({ id: Number(c.id), name: c.name })),
+    }, 'Filter options fetched successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const companyDetails = async (req, res, next) => {
+  try {
+    const company = await prisma.companies.findFirst({
+      where: { slug: req.params.slug, deleted_at: null },
+      include: {
+        locations: true,
+        business_categories: true,
+        company_business_categories: { include: { business_categories: true } },
+        company_business_types: { include: { business_types: true } },
+        company_certificates: { include: { certificates: true } },
+        company_faqs: true,
+        company_clients: true,
+        business_contacts: { where: { deleted_at: null }, take: 1 },
+        decision_makers: true,
+      },
+    });
+
+    if (!company) return notFound(res, 'Company not found');
+
+    const userId = req.user?.id || null;
+    const formatted = await formatCompanyListItem(company, userId);
+
+    // Get overview
+    const overview = await prisma.company_overviews.findFirst({
+      where: { company_id: company.id, deleted_at: null },
+    });
+
+    // Get products with media
+    const products = await prisma.products.findMany({
+      where: { company_id: company.id },
+    });
+
+    const productsWithMedia = await Promise.all(
+      products.map(async (p) => {
+        const pMedia = await getMediaForModel('App\\Models\\Product', p.id, 'image');
+        return {
+          id: Number(p.id),
+          name: p.name,
+          price_range: p.price_range,
+          price_max: p.price_max,
+          moq: p.moq,
+          product_category_id: Number(p.product_category_id),
+          image_url: pMedia.length > 0 ? pMedia[0].url : null,
+        };
+      })
+    );
+
+    // Get clients with media
+    const clientsWithMedia = await Promise.all(
+      (company.company_clients || []).map(async (cl) => {
+        const clMedia = await getMediaForModel('App\\Models\\CompanyClient', cl.id, 'image');
+        return {
+          id: Number(cl.id),
+          image_url: clMedia.length > 0 ? clMedia[0].url : null,
+        };
+      })
+    );
+
+    // Get certificate images
+    const certsWithMedia = await Promise.all(
+      (company.company_certificates || []).map(async (cc) => {
+        const certMedia = await getMediaForModel('App\\Models\\Certificate', cc.certificates.id);
+        return {
+          id: Number(cc.certificates.id),
+          name: cc.certificates.name,
+          image_url: certMedia.length > 0 ? certMedia[0].url : null,
+        };
+      })
+    );
+
+    return success(res, {
+      ...formatted,
+      certificates: certsWithMedia,
+      overview: overview
+        ? {
+            id: Number(overview.id),
+            moq: overview.moq,
+            lead_time: overview.lead_time,
+            lead_time_unit: overview.lead_time_unit,
+            shipment_term: overview.shipment_term,
+            payment_policy: overview.payment_policy,
+            total_units: overview.total_units,
+            production_capacity: overview.production_capacity,
+            production_capacity_unit: overview.production_capacity_unit,
+            market_share: overview.market_share ? JSON.parse(overview.market_share) : [],
+            yearly_turnover: overview.yearly_turnover ? JSON.parse(overview.yearly_turnover) : [],
+            is_manufacturer: overview.is_manufacturer,
+          }
+        : null,
+      products: productsWithMedia,
+      clients: clientsWithMedia,
+      faqs: (company.company_faqs || []).map((f) => ({
+        id: Number(f.id),
+        question: f.question,
+        answer: f.answer,
+      })),
+      contact: company.business_contacts?.[0]
+        ? {
+            id: Number(company.business_contacts[0].id),
+            address: company.business_contacts[0].address,
+            factory_address: company.business_contacts[0].factory_address,
+            email: company.business_contacts[0].email,
+            phone: company.business_contacts[0].phone,
+            whatsapp: company.business_contacts[0].whatsapp,
+            website: company.business_contacts[0].website,
+            lat_long: company.business_contacts[0].lat_long ? JSON.parse(company.business_contacts[0].lat_long) : null,
+          }
+        : null,
+      decision_makers: (company.decision_makers || []).map((dm) => ({
+        id: Number(dm.id),
+        name: dm.name,
+        email: dm.email,
+        phone: dm.phone,
+        whatsapp: dm.whatsapp,
+        designation: dm.designation,
+      })),
+    }, 'Company details fetched successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  companyList,
+  getFilterOptions,
+  companyDetails,
+  formatCompanyListItem,
+};

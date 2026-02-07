@@ -1,0 +1,126 @@
+const prisma = require('../config/database');
+const path = require('path');
+const fs = require('fs');
+const { processUploadedImage, deleteFile } = require('../utils/imageProcessing');
+const { getMediaUrl } = require('../utils/mediaUrl');
+
+// Model type mapping for Spatie MediaLibrary backward compatibility
+const MODEL_TYPE_MAP = {
+  'App\\Models\\Company': 'company',
+  'App\\Models\\Blog': 'blog',
+  'App\\Models\\Product': 'product',
+  'App\\Models\\User': 'user',
+  'App\\Models\\SourcingProposal': 'sourcing_proposal',
+  'App\\Models\\Partner': 'partner',
+  'App\\Models\\OurTeam': 'our_team',
+  'App\\Models\\Certificate': 'certificate',
+  'App\\Models\\BusinessCategory': 'business_category',
+  'App\\Models\\BusinessAd': 'business_ad',
+  'App\\Models\\About': 'about',
+  'App\\Models\\CompanyClient': 'company_client',
+};
+
+const getMediaForModel = async (modelType, modelId, collectionName = null) => {
+  let query = `SELECT * FROM media WHERE model_type = ? AND model_id = ?`;
+  const params = [modelType, modelId];
+
+  if (collectionName) {
+    query += ` AND collection_name = ?`;
+    params.push(collectionName);
+  }
+
+  query += ` ORDER BY order_column ASC`;
+
+  const media = await prisma.$queryRawUnsafe(query, ...params);
+  return media.map((m) => resolveMedia(m));
+};
+
+const resolveMedia = (media) => {
+  if (!media) return null;
+  const baseUrl = process.env.LARAVEL_URL || `http://localhost:8000`;
+  const url = `${baseUrl}/storage/${media.id}/${media.file_name}`;
+
+  return {
+    id: media.id,
+    file_name: media.file_name,
+    mime_type: media.mime_type,
+    size: media.size,
+    url,
+    original_url: url,
+    preview_url: url,
+    collection_name: media.collection_name,
+    custom_properties: media.custom_properties ? JSON.parse(media.custom_properties) : {},
+  };
+};
+
+const addMedia = async (file, modelType, modelId, collectionName = 'default') => {
+  const relativePath = file.path.replace(process.cwd() + path.sep, '').replace(/\\/g, '/');
+
+  // Process image for thumbnails
+  let processedPaths = {};
+  if (file.mimetype && file.mimetype.startsWith('image/')) {
+    processedPaths = await processUploadedImage(file.path);
+  }
+
+  // Get next order
+  const maxOrder = await prisma.$queryRawUnsafe(
+    `SELECT COALESCE(MAX(order_column), 0) as max_order FROM media WHERE model_type = ? AND model_id = ?`,
+    modelType,
+    modelId
+  );
+
+  const order = (maxOrder[0]?.max_order || 0) + 1;
+
+  await prisma.$queryRawUnsafe(
+    `INSERT INTO media (model_type, model_id, uuid, collection_name, name, file_name, mime_type, disk, conversions_disk, size, order_column, created_at, updated_at)
+     VALUES (?, ?, UUID(), ?, ?, ?, ?, 'public', 'public', ?, ?, NOW(), NOW())`,
+    modelType,
+    modelId,
+    collectionName,
+    path.parse(file.originalname).name,
+    file.filename,
+    file.mimetype,
+    file.size,
+    order
+  );
+
+  return { path: relativePath, filename: file.filename };
+};
+
+const deleteMedia = async (mediaId) => {
+  const media = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE id = ?`, mediaId);
+  if (media.length > 0) {
+    // Try to delete the file
+    const filePath = path.join(process.cwd(), 'uploads', media[0].file_name);
+    deleteFile(filePath);
+    await prisma.$queryRawUnsafe(`DELETE FROM media WHERE id = ?`, mediaId);
+  }
+};
+
+const deleteAllMediaForModel = async (modelType, modelId) => {
+  const media = await prisma.$queryRawUnsafe(
+    `SELECT * FROM media WHERE model_type = ? AND model_id = ?`,
+    modelType,
+    modelId
+  );
+
+  for (const m of media) {
+    const filePath = path.join(process.cwd(), 'uploads', m.file_name);
+    deleteFile(filePath);
+  }
+
+  await prisma.$queryRawUnsafe(
+    `DELETE FROM media WHERE model_type = ? AND model_id = ?`,
+    modelType,
+    modelId
+  );
+};
+
+module.exports = {
+  getMediaForModel,
+  resolveMedia,
+  addMedia,
+  deleteMedia,
+  deleteAllMediaForModel,
+  MODEL_TYPE_MAP,
+};

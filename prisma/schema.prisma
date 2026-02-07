@@ -1,0 +1,820 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model abouts {
+  id              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  description     String?   @db.Text
+  partners        String?   @db.VarChar(255)
+  countries       String?   @db.VarChar(255)
+  listed_business String?   @db.VarChar(255)
+  factory_people  String?   @db.VarChar(255)
+  global_audience String?   @db.VarChar(255)
+  mission         String?   @db.Text
+  vision          String?   @db.Text
+  market_share    String?   @db.LongText
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+}
+
+model blog_blog_types {
+  id           BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  blog_id      BigInt     @db.UnsignedBigInt
+  blog_type_id BigInt     @db.UnsignedBigInt
+  created_at   DateTime?  @db.Timestamp(0)
+  updated_at   DateTime?  @db.Timestamp(0)
+  blogs        blogs      @relation(fields: [blog_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "blog_blog_types_blog_id_foreign")
+  blog_types   blog_types @relation(fields: [blog_type_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "blog_blog_types_blog_type_id_foreign")
+
+  @@index([blog_id], map: "blog_blog_types_blog_id_foreign")
+  @@index([blog_type_id], map: "blog_blog_types_blog_type_id_foreign")
+}
+
+model blog_types {
+  id              BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  name            String            @db.VarChar(255)
+  deleted_at      DateTime?         @db.Timestamp(0)
+  created_at      DateTime?         @db.Timestamp(0)
+  updated_at      DateTime?         @db.Timestamp(0)
+  blog_blog_types blog_blog_types[]
+}
+
+model blogs {
+  id                BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  title             String            @db.VarChar(255)
+  author            String?           @db.VarChar(255)
+  slug              String            @unique(map: "blogs_slug_unique") @db.VarChar(255)
+  short_description String            @db.Text
+  content           String            @db.LongText
+  status            blogs_status      @default(draft)
+  is_featured       Boolean           @default(false)
+  meta_title        String            @db.Text
+  meta_description  String            @db.Text
+  meta_keywords     String            @db.Text
+  created_at        DateTime?         @db.Timestamp(0)
+  updated_at        DateTime?         @db.Timestamp(0)
+  blog_blog_types   blog_blog_types[]
+}
+
+model business_ads {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  link       String?   @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model business_categories {
+  id                          BigInt                        @id @default(autoincrement()) @db.UnsignedBigInt
+  name                        String                        @db.VarChar(255)
+  deleted_at                  DateTime?                     @db.Timestamp(0)
+  created_at                  DateTime?                     @db.Timestamp(0)
+  updated_at                  DateTime?                     @db.Timestamp(0)
+  companies                   companies[]
+  company_business_categories company_business_categories[]
+  contact_messages            contact_messages[]
+}
+
+model business_contacts {
+  id              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id      BigInt    @db.UnsignedBigInt
+  address         String?   @db.VarChar(255)
+  factory_address String?   @db.Text
+  email           String    @db.VarChar(255)
+  phone           String?   @db.VarChar(255)
+  whatsapp        String?   @db.VarChar(255)
+  website         String?   @db.VarChar(255)
+  lat_long        String?   @db.LongText
+  deleted_at      DateTime? @db.Timestamp(0)
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+  companies       companies @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "business_contacts_company_id_foreign")
+
+  @@index([company_id], map: "business_contacts_company_id_foreign")
+}
+
+model business_types {
+  id                     BigInt                   @id @default(autoincrement()) @db.UnsignedBigInt
+  name                   String                   @db.VarChar(255)
+  created_at             DateTime?                @db.Timestamp(0)
+  updated_at             DateTime?                @db.Timestamp(0)
+  company_business_types company_business_types[]
+}
+
+model certificates {
+  id                   BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  name                 String                 @db.VarChar(255)
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  company_certificates company_certificates[]
+}
+
+model companies {
+  id                                BigInt                        @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                           BigInt                        @db.UnsignedBigInt
+  created_by                        BigInt                        @db.UnsignedBigInt
+  name                              String                        @db.VarChar(255)
+  status                            companies_status              @default(created_by_admin)
+  business_category_id              BigInt?                       @db.UnsignedBigInt
+  slug                              String                        @db.VarChar(255)
+  view_count                        Int                           @default(0)
+  location_id                       BigInt                        @db.UnsignedBigInt
+  manpower                          String?                       @db.VarChar(255)
+  is_active                         Boolean                       @default(true)
+  moto                              String?                       @db.Text
+  keywords                          String?                       @db.Text
+  tags                              String?                       @db.Text
+  about                             String?                       @db.Text
+  deleted_at                        DateTime?                     @db.Timestamp(0)
+  created_at                        DateTime?                     @db.Timestamp(0)
+  updated_at                        DateTime?                     @db.Timestamp(0)
+  business_contacts                 business_contacts[]
+  business_categories               business_categories?          @relation(fields: [business_category_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "companies_business_category_id_foreign")
+  users_companies_created_byTousers users                         @relation("companies_created_byTousers", fields: [created_by], references: [id], onUpdate: Restrict, map: "companies_created_by_foreign")
+  locations                         locations                     @relation(fields: [location_id], references: [id], onUpdate: Restrict, map: "companies_location_id_foreign")
+  users_companies_user_idTousers    users                         @relation("companies_user_idTousers", fields: [user_id], references: [id], onUpdate: Restrict, map: "companies_user_id_foreign")
+  company_business_categories       company_business_categories[]
+  company_business_types            company_business_types[]
+  company_certificates              company_certificates[]
+  company_claims                    company_claims[]
+  company_clients                   company_clients[]
+  company_compliances               company_compliances[]
+  company_faqs                      company_faqs[]
+  company_reports                   company_reports[]
+  contact_messages                  contact_messages[]
+  decision_makers                   decision_makers[]
+  email_for_companies               email_for_companies[]
+
+  @@index([business_category_id], map: "companies_business_category_id_foreign")
+  @@index([created_by], map: "companies_created_by_foreign")
+  @@index([location_id], map: "companies_location_id_foreign")
+  @@index([user_id], map: "companies_user_id_foreign")
+}
+
+model company_business_categories {
+  id                   BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id           BigInt              @db.UnsignedBigInt
+  business_category_id BigInt              @db.UnsignedBigInt
+  created_at           DateTime?           @db.Timestamp(0)
+  updated_at           DateTime?           @db.Timestamp(0)
+  business_categories  business_categories @relation(fields: [business_category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_business_categories_business_category_id_foreign")
+  companies            companies           @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_business_categories_company_id_foreign")
+
+  @@index([business_category_id], map: "company_business_categories_business_category_id_foreign")
+  @@index([company_id], map: "company_business_categories_company_id_foreign")
+}
+
+model company_business_types {
+  id               BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id       BigInt         @db.UnsignedBigInt
+  business_type_id BigInt         @db.UnsignedBigInt
+  created_at       DateTime?      @db.Timestamp(0)
+  updated_at       DateTime?      @db.Timestamp(0)
+  business_types   business_types @relation(fields: [business_type_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_business_types_business_type_id_foreign")
+  companies        companies      @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_business_types_company_id_foreign")
+
+  @@index([business_type_id], map: "company_business_types_business_type_id_foreign")
+  @@index([company_id], map: "company_business_types_company_id_foreign")
+}
+
+model company_certificates {
+  id             BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id     BigInt       @db.UnsignedBigInt
+  certificate_id BigInt       @db.UnsignedBigInt
+  created_at     DateTime?    @db.Timestamp(0)
+  updated_at     DateTime?    @db.Timestamp(0)
+  certificates   certificates @relation(fields: [certificate_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_certificates_certificate_id_foreign")
+  companies      companies    @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_certificates_company_id_foreign")
+
+  @@index([certificate_id], map: "company_certificates_certificate_id_foreign")
+  @@index([company_id], map: "company_certificates_company_id_foreign")
+}
+
+model company_claims {
+  id         BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id BigInt                @db.UnsignedBigInt
+  user_id    BigInt                @db.UnsignedBigInt
+  message    String?               @db.Text
+  status     company_claims_status @default(pending)
+  created_at DateTime?             @db.Timestamp(0)
+  updated_at DateTime?             @db.Timestamp(0)
+  companies  companies             @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_claims_company_id_foreign")
+  users      users                 @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "company_claims_user_id_foreign")
+
+  @@index([company_id], map: "company_claims_company_id_foreign")
+  @@index([user_id], map: "company_claims_user_id_foreign")
+}
+
+model company_clients {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id BigInt    @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  companies  companies @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_clients_company_id_foreign")
+
+  @@index([company_id], map: "company_clients_company_id_foreign")
+}
+
+model company_compliances {
+  id            BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id    BigInt      @db.UnsignedBigInt
+  compliance_id BigInt      @db.UnsignedBigInt
+  created_at    DateTime?   @db.Timestamp(0)
+  updated_at    DateTime?   @db.Timestamp(0)
+  companies     companies   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_compliances_company_id_foreign")
+  compliances   compliances @relation(fields: [compliance_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_compliances_compliance_id_foreign")
+
+  @@index([company_id], map: "company_compliances_company_id_foreign")
+  @@index([compliance_id], map: "company_compliances_compliance_id_foreign")
+}
+
+model company_faqs {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id BigInt    @db.UnsignedBigInt
+  question   String    @db.Text
+  answer     String    @db.Text
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  companies  companies @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_faqs_company_id_foreign")
+
+  @@index([company_id], map: "company_faqs_company_id_foreign")
+}
+
+model company_overviews {
+  id                       BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id               BigInt    @db.UnsignedBigInt
+  moq                      String?   @db.VarChar(255)
+  lead_time                String?   @db.VarChar(255)
+  lead_time_unit           String?   @db.VarChar(255)
+  shipment_term            String?   @db.VarChar(255)
+  payment_policy           String?   @db.VarChar(255)
+  total_units              String?   @db.VarChar(255)
+  production_capacity      String?   @db.VarChar(255)
+  production_capacity_unit String?   @db.VarChar(255)
+  market_share             String?   @db.LongText
+  yearly_turnover          String?   @db.LongText
+  is_manufacturer          Boolean?  @default(true)
+  deleted_at               DateTime? @db.Timestamp(0)
+  created_at               DateTime? @db.Timestamp(0)
+  updated_at               DateTime? @db.Timestamp(0)
+}
+
+model company_reports {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id BigInt    @db.UnsignedBigInt
+  name       String?   @db.VarChar(255)
+  email      String?   @db.VarChar(255)
+  phone      String?   @db.VarChar(255)
+  message    String?   @db.Text
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  companies  companies @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "company_reports_company_id_foreign")
+
+  @@index([company_id], map: "company_reports_company_id_foreign")
+}
+
+model company_user {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id BigInt    @db.UnsignedBigInt
+  user_id    BigInt    @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model compliances {
+  id                  BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  name                String                @db.VarChar(255)
+  deleted_at          DateTime?             @db.Timestamp(0)
+  created_at          DateTime?             @db.Timestamp(0)
+  updated_at          DateTime?             @db.Timestamp(0)
+  company_compliances company_compliances[]
+}
+
+model contact_messages {
+  id                   BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  business_category_id BigInt?                      @db.UnsignedBigInt
+  company_id           BigInt?                      @db.UnsignedBigInt
+  name                 String?                      @db.VarChar(255)
+  company_name         String?                      @db.VarChar(255)
+  email                String?                      @db.VarChar(255)
+  phone                String?                      @db.VarChar(255)
+  message              String?                      @db.Text
+  interest             String?                      @db.VarChar(255)
+  lead_status          contact_messages_lead_status @default(New)
+  comment              String?                      @db.Text
+  deleted_at           DateTime?                    @db.Timestamp(0)
+  created_at           DateTime?                    @db.Timestamp(0)
+  updated_at           DateTime?                    @db.Timestamp(0)
+  business_categories  business_categories?         @relation(fields: [business_category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "contact_messages_business_category_id_foreign")
+  companies            companies?                   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "contact_messages_company_id_foreign")
+
+  @@index([business_category_id], map: "contact_messages_business_category_id_foreign")
+  @@index([company_id], map: "contact_messages_company_id_foreign")
+}
+
+model decision_makers {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id  BigInt    @db.UnsignedBigInt
+  name        String    @db.VarChar(255)
+  email       String    @db.VarChar(255)
+  whatsapp    String?   @db.VarChar(255)
+  phone       String?   @db.VarChar(255)
+  designation String    @db.VarChar(255)
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+  companies   companies @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "decision_makers_company_id_foreign")
+
+  @@index([company_id], map: "decision_makers_company_id_foreign")
+}
+
+model email_for_companies {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id BigInt    @db.UnsignedBigInt
+  email      String?   @db.VarChar(255)
+  subject    String?   @db.VarChar(255)
+  message    String?   @db.Text
+  comment    String?   @db.Text
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  companies  companies @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "email_for_companies_company_id_foreign")
+
+  @@index([company_id], map: "email_for_companies_company_id_foreign")
+}
+
+model failed_jobs {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  uuid       String   @unique(map: "failed_jobs_uuid_unique") @db.VarChar(255)
+  connection String   @db.Text
+  queue      String   @db.Text
+  payload    String   @db.LongText
+  exception  String   @db.LongText
+  failed_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model favorite_proposals {
+  id                   BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id              BigInt             @db.UnsignedBigInt
+  sourcing_proposal_id BigInt             @db.UnsignedBigInt
+  created_at           DateTime?          @db.Timestamp(0)
+  updated_at           DateTime?          @db.Timestamp(0)
+  sourcing_proposals   sourcing_proposals @relation(fields: [sourcing_proposal_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "favorite_proposals_sourcing_proposal_id_foreign")
+  users                users              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "favorite_proposals_user_id_foreign")
+
+  @@unique([user_id, sourcing_proposal_id], map: "favorite_proposals_user_id_sourcing_proposal_id_unique")
+  @@index([sourcing_proposal_id], map: "favorite_proposals_sourcing_proposal_id_index")
+  @@index([user_id], map: "favorite_proposals_user_id_index")
+}
+
+model jobs {
+  id           BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  queue        String @db.VarChar(255)
+  payload      String @db.LongText
+  attempts     Int    @db.UnsignedTinyInt
+  reserved_at  Int?   @db.UnsignedInt
+  available_at Int    @db.UnsignedInt
+  created_at   Int    @db.UnsignedInt
+
+  @@index([queue], map: "jobs_queue_index")
+}
+
+model locations {
+  id                 BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  name               String               @db.VarChar(255)
+  country_code       String               @db.VarChar(7)
+  phone_code         String?              @db.VarChar(10)
+  flag_path          String               @db.VarChar(255)
+  created_at         DateTime?            @db.Timestamp(0)
+  updated_at         DateTime?            @db.Timestamp(0)
+  companies          companies[]
+  sourcing_proposals sourcing_proposals[]
+}
+
+model media {
+  id                    BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  model_type            String    @db.VarChar(255)
+  model_id              BigInt    @db.UnsignedBigInt
+  uuid                  String?   @unique(map: "media_uuid_unique") @db.Char(36)
+  collection_name       String    @db.VarChar(255)
+  name                  String    @db.VarChar(255)
+  file_name             String    @db.VarChar(255)
+  mime_type             String?   @db.VarChar(255)
+  disk                  String    @db.VarChar(255)
+  conversions_disk      String?   @db.VarChar(255)
+  size                  BigInt    @db.UnsignedBigInt
+  manipulations         String    @db.LongText
+  custom_properties     String    @db.LongText
+  generated_conversions String    @db.LongText
+  responsive_images     String    @db.LongText
+  order_column          Int?      @db.UnsignedInt
+  created_at            DateTime? @db.Timestamp(0)
+  updated_at            DateTime? @db.Timestamp(0)
+
+  @@index([model_type, model_id], map: "media_model_type_model_id_index")
+  @@index([order_column], map: "media_order_column_index")
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  migration String @db.VarChar(255)
+  batch     Int
+}
+
+model model_has_permissions {
+  permission_id BigInt      @db.UnsignedBigInt
+  model_type    String      @db.VarChar(255)
+  model_id      BigInt      @db.UnsignedBigInt
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "model_has_permissions_permission_id_foreign")
+
+  @@id([permission_id, model_id, model_type])
+  @@index([model_id, model_type], map: "model_has_permissions_model_id_model_type_index")
+}
+
+model model_has_roles {
+  role_id    BigInt @db.UnsignedBigInt
+  model_type String @db.VarChar(255)
+  model_id   BigInt @db.UnsignedBigInt
+  roles      roles  @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "model_has_roles_role_id_foreign")
+
+  @@id([role_id, model_id, model_type])
+  @@index([model_id, model_type], map: "model_has_roles_model_id_model_type_index")
+}
+
+model news_letters {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  email      String    @db.VarChar(255)
+  deleted_at DateTime? @db.Timestamp(0)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model oauth_access_tokens {
+  id         String    @id @db.VarChar(100)
+  user_id    BigInt?   @db.UnsignedBigInt
+  client_id  BigInt    @db.UnsignedBigInt
+  name       String?   @db.VarChar(255)
+  scopes     String?   @db.Text
+  revoked    Boolean
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  expires_at DateTime? @db.DateTime(0)
+
+  @@index([user_id], map: "oauth_access_tokens_user_id_index")
+}
+
+model oauth_auth_codes {
+  id         String    @id @db.VarChar(100)
+  user_id    BigInt    @db.UnsignedBigInt
+  client_id  BigInt    @db.UnsignedBigInt
+  scopes     String?   @db.Text
+  revoked    Boolean
+  expires_at DateTime? @db.DateTime(0)
+
+  @@index([user_id], map: "oauth_auth_codes_user_id_index")
+}
+
+model oauth_clients {
+  id                     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                BigInt?   @db.UnsignedBigInt
+  name                   String    @db.VarChar(255)
+  secret                 String?   @db.VarChar(100)
+  provider               String?   @db.VarChar(255)
+  redirect               String    @db.Text
+  personal_access_client Boolean
+  password_client        Boolean
+  revoked                Boolean
+  created_at             DateTime? @db.Timestamp(0)
+  updated_at             DateTime? @db.Timestamp(0)
+
+  @@index([user_id], map: "oauth_clients_user_id_index")
+}
+
+model oauth_personal_access_clients {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  client_id  BigInt    @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model oauth_refresh_tokens {
+  id              String    @id @db.VarChar(100)
+  access_token_id String    @db.VarChar(100)
+  revoked         Boolean
+  expires_at      DateTime? @db.DateTime(0)
+
+  @@index([access_token_id], map: "oauth_refresh_tokens_access_token_id_index")
+}
+
+model our_teams {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String    @db.VarChar(255)
+  email       String    @unique(map: "our_teams_email_unique") @db.VarChar(255)
+  designation String    @db.VarChar(255)
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+}
+
+model partners {
+  id         BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  link       String?       @db.VarChar(255)
+  type       partners_type @default(b2b)
+  created_at DateTime?     @db.Timestamp(0)
+  updated_at DateTime?     @db.Timestamp(0)
+}
+
+model password_reset_tokens {
+  email      String    @id @db.VarChar(255)
+  token      String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+}
+
+model password_resets {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  email      String    @db.VarChar(255)
+  otp        String    @db.VarChar(255)
+  expires_at DateTime  @default(now()) @db.Timestamp(0)
+  is_used    Boolean   @default(false)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model permissions {
+  id                    BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  name                  String                  @db.VarChar(255)
+  guard_name            String                  @db.VarChar(255)
+  created_at            DateTime?               @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  model_has_permissions model_has_permissions[]
+  role_has_permissions  role_has_permissions[]
+
+  @@unique([name, guard_name], map: "permissions_name_guard_name_unique")
+}
+
+model personal_access_tokens {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  tokenable_type String    @db.VarChar(255)
+  tokenable_id   BigInt    @db.UnsignedBigInt
+  name           String    @db.VarChar(255)
+  token          String    @unique(map: "personal_access_tokens_token_unique") @db.VarChar(64)
+  abilities      String?   @db.Text
+  last_used_at   DateTime? @db.Timestamp(0)
+  expires_at     DateTime? @db.Timestamp(0)
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+
+  @@index([tokenable_type, tokenable_id], map: "personal_access_tokens_tokenable_type_tokenable_id_index")
+}
+
+model pricings {
+  id            BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  title         String        @db.VarChar(255)
+  price         String        @db.VarChar(255)
+  bt_short_text String?       @db.VarChar(255)
+  benefits      String?       @db.LongText
+  services      String?       @db.LongText
+  type          pricings_type
+  created_at    DateTime?     @db.Timestamp(0)
+  updated_at    DateTime?     @db.Timestamp(0)
+}
+
+model product_categories {
+  id                 BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  name               String               @db.VarChar(255)
+  product_count      Int                  @default(0)
+  created_at         DateTime?            @db.Timestamp(0)
+  updated_at         DateTime?            @db.Timestamp(0)
+  sourcing_proposals sourcing_proposals[]
+}
+
+model product_category_sourcing_proposal {
+  id                   BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  sourcing_proposal_id BigInt    @db.UnsignedBigInt
+  product_category_id  BigInt    @db.UnsignedBigInt
+  created_at           DateTime? @db.Timestamp(0)
+  updated_at           DateTime? @db.Timestamp(0)
+}
+
+model products {
+  id                  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  company_id          BigInt    @db.UnsignedBigInt
+  product_category_id BigInt    @db.UnsignedBigInt
+  name                String    @db.VarChar(255)
+  price_range         String    @db.VarChar(255)
+  price_max           String?   @db.VarChar(255)
+  moq                 String?   @db.VarChar(255)
+  created_by          BigInt    @db.UnsignedBigInt
+  created_at          DateTime? @db.Timestamp(0)
+  updated_at          DateTime? @db.Timestamp(0)
+}
+
+model proposal_comment_replies {
+  id                  BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  proposal_comment_id BigInt            @db.UnsignedBigInt
+  user_id             BigInt            @db.UnsignedBigInt
+  reply               String            @db.Text
+  created_at          DateTime?         @db.Timestamp(0)
+  updated_at          DateTime?         @db.Timestamp(0)
+  deleted_at          DateTime?         @db.Timestamp(0)
+  proposal_comments   proposal_comments @relation(fields: [proposal_comment_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "proposal_comment_replies_proposal_comment_id_foreign")
+  users               users             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "proposal_comment_replies_user_id_foreign")
+
+  @@index([proposal_comment_id, created_at], map: "proposal_comment_replies_proposal_comment_id_created_at_index")
+  @@index([user_id], map: "proposal_comment_replies_user_id_index")
+}
+
+model proposal_comments {
+  id                       BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  sourcing_proposal_id     BigInt                     @db.UnsignedBigInt
+  user_id                  BigInt                     @db.UnsignedBigInt
+  comment                  String                     @db.Text
+  created_at               DateTime?                  @db.Timestamp(0)
+  updated_at               DateTime?                  @db.Timestamp(0)
+  deleted_at               DateTime?                  @db.Timestamp(0)
+  proposal_comment_replies proposal_comment_replies[]
+  sourcing_proposals       sourcing_proposals         @relation(fields: [sourcing_proposal_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "proposal_comments_sourcing_proposal_id_foreign")
+  users                    users                      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "proposal_comments_user_id_foreign")
+
+  @@index([sourcing_proposal_id, created_at], map: "proposal_comments_sourcing_proposal_id_created_at_index")
+  @@index([user_id], map: "proposal_comments_user_id_index")
+}
+
+model role_has_permissions {
+  permission_id BigInt      @db.UnsignedBigInt
+  role_id       BigInt      @db.UnsignedBigInt
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "role_has_permissions_permission_id_foreign")
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "role_has_permissions_role_id_foreign")
+
+  @@id([permission_id, role_id])
+  @@index([role_id], map: "role_has_permissions_role_id_foreign")
+}
+
+model roles {
+  id                   BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  name                 String                 @db.VarChar(255)
+  guard_name           String                 @db.VarChar(255)
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  model_has_roles      model_has_roles[]
+  role_has_permissions role_has_permissions[]
+
+  @@unique([name, guard_name], map: "roles_name_guard_name_unique")
+}
+
+model site_settings {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  key        String    @unique(map: "site_settings_key_unique") @db.VarChar(255)
+  value      String?   @db.Text
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model sourcing_proposals {
+  id                                          BigInt                            @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                                     BigInt                            @db.UnsignedBigInt
+  product_category_id                         BigInt?                           @db.UnsignedBigInt
+  location_id                                 BigInt?                           @db.UnsignedBigInt
+  title                                       String                            @db.VarChar(255)
+  description                                 String                            @db.Text
+  quantity                                    Decimal?                          @db.Decimal(15, 2)
+  unit                                        sourcing_proposals_unit?
+  price                                       Decimal?                          @db.Decimal(15, 2)
+  currency                                    sourcing_proposals_currency?
+  payment_method                              sourcing_proposals_payment_method
+  delivery_info                               String?                           @db.Text
+  company_name                                String?                           @db.VarChar(255)
+  company_slug                                String?                           @db.VarChar(255)
+  email                                       String?                           @db.VarChar(255)
+  phone                                       String?                           @db.VarChar(255)
+  whatsapp                                    String?                           @db.VarChar(255)
+  status                                      sourcing_proposals_status         @default(pending)
+  admin_notes                                 String?                           @db.Text
+  approved_by                                 BigInt?                           @db.UnsignedBigInt
+  approved_at                                 DateTime?                         @db.Timestamp(0)
+  view_count                                  Int                               @default(0)
+  created_at                                  DateTime?                         @db.Timestamp(0)
+  updated_at                                  DateTime?                         @db.Timestamp(0)
+  deleted_at                                  DateTime?                         @db.Timestamp(0)
+  favorite_proposals                          favorite_proposals[]
+  proposal_comments                           proposal_comments[]
+  users_sourcing_proposals_approved_byTousers users?                            @relation("sourcing_proposals_approved_byTousers", fields: [approved_by], references: [id], onUpdate: Restrict, map: "sourcing_proposals_approved_by_foreign")
+  locations                                   locations?                        @relation(fields: [location_id], references: [id], onUpdate: Restrict, map: "sourcing_proposals_location_id_foreign")
+  product_categories                          product_categories?               @relation(fields: [product_category_id], references: [id], onUpdate: Restrict, map: "sourcing_proposals_product_category_id_foreign")
+  users_sourcing_proposals_user_idTousers     users                             @relation("sourcing_proposals_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "sourcing_proposals_user_id_foreign")
+
+  @@index([approved_by], map: "sourcing_proposals_approved_by_foreign")
+  @@index([location_id], map: "sourcing_proposals_location_id_index")
+  @@index([product_category_id], map: "sourcing_proposals_product_category_id_index")
+  @@index([status, created_at], map: "sourcing_proposals_status_created_at_index")
+  @@index([user_id], map: "sourcing_proposals_user_id_index")
+}
+
+model users {
+  id                                                       BigInt                     @id @default(autoincrement()) @db.UnsignedBigInt
+  uuid                                                     String?                    @unique(map: "users_uuid_unique") @db.Char(36)
+  first_name                                               String                     @db.VarChar(255)
+  last_name                                                String                     @db.VarChar(255)
+  email                                                    String                     @unique(map: "users_email_unique") @db.VarChar(255)
+  phone                                                    String?                    @db.VarChar(255)
+  is_banned                                                Boolean                    @default(false)
+  email_verified_at                                        DateTime?                  @db.Timestamp(0)
+  password                                                 String                     @db.VarChar(255)
+  status                                                   users_status               @default(pending)
+  remember_token                                           String?                    @db.VarChar(100)
+  deleted_at                                               DateTime?                  @db.Timestamp(0)
+  created_at                                               DateTime?                  @db.Timestamp(0)
+  updated_at                                               DateTime?                  @db.Timestamp(0)
+  companies_companies_created_byTousers                    companies[]                @relation("companies_created_byTousers")
+  companies_companies_user_idTousers                       companies[]                @relation("companies_user_idTousers")
+  company_claims                                           company_claims[]
+  favorite_proposals                                       favorite_proposals[]
+  proposal_comment_replies                                 proposal_comment_replies[]
+  proposal_comments                                        proposal_comments[]
+  sourcing_proposals_sourcing_proposals_approved_byTousers sourcing_proposals[]       @relation("sourcing_proposals_approved_byTousers")
+  sourcing_proposals_sourcing_proposals_user_idTousers     sourcing_proposals[]       @relation("sourcing_proposals_user_idTousers")
+}
+
+enum partners_type {
+  marketing
+  b2b
+}
+
+enum companies_status {
+  created_by_admin
+  created_by_user
+  claimed
+}
+
+enum company_claims_status {
+  pending
+  approved
+  cancelled
+}
+
+enum blogs_status {
+  draft
+  published
+}
+
+enum pricings_type {
+  monthly
+  annual
+}
+
+enum sourcing_proposals_unit {
+  pieces
+  kg
+  meter
+  yard
+  ton
+  liter
+  box
+  container
+}
+
+enum contact_messages_lead_status {
+  New
+  MQL
+  SQL
+  Conversion
+  Not_Qualified @map("Not Qualified")
+}
+
+enum sourcing_proposals_currency {
+  USD
+  EUR
+  GBP
+  JPY
+  CNY
+  INR
+  BDT
+  AUD
+  CAD
+  CHF
+}
+
+enum users_status {
+  pending
+  approved
+  rejected
+}
+
+enum sourcing_proposals_payment_method {
+  cash
+  bank_transfer
+  letter_of_credit
+  paypal
+  escrow
+  credit_card
+  advance_payment
+  payment_on_delivery
+  other
+}
+
+enum sourcing_proposals_status {
+  pending
+  approved
+  rejected
+}
