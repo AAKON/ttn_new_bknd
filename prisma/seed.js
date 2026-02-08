@@ -65,13 +65,13 @@ async function seedUsers() {
   const hashedPassword = await bcrypt.hash('123456', 10);
 
   const users = [
-    { first_name: 'Mr.', last_name: 'Admin', email: 'admin@admin.com', status: 'approved' },
-    { first_name: 'John', last_name: 'Buyer', email: 'buyer@ttn.com', status: 'approved' },
-    { first_name: 'Sarah', last_name: 'Seller', email: 'seller@ttn.com', status: 'approved' },
-    { first_name: 'Mike', last_name: 'Talent', email: 'talent@ttn.com', status: 'approved' },
-    { first_name: 'Jane', last_name: 'Doe', email: 'jane@ttn.com', status: 'approved' },
-    { first_name: 'Ali', last_name: 'Khan', email: 'ali@ttn.com', status: 'approved' },
-    { first_name: 'Emily', last_name: 'Chen', email: 'emily@ttn.com', status: 'pending' },
+    { first_name: 'Mr.', last_name: 'Admin', email: 'admin@admin.com', status: 'approved', user_type: 'admin_user' },
+    { first_name: 'John', last_name: 'Buyer', email: 'buyer@ttn.com', status: 'approved', user_type: 'user' },
+    { first_name: 'Sarah', last_name: 'Seller', email: 'seller@ttn.com', status: 'approved', user_type: 'user' },
+    { first_name: 'Mike', last_name: 'Talent', email: 'talent@ttn.com', status: 'approved', user_type: 'user' },
+    { first_name: 'Jane', last_name: 'Doe', email: 'jane@ttn.com', status: 'approved', user_type: 'user' },
+    { first_name: 'Ali', last_name: 'Khan', email: 'ali@ttn.com', status: 'approved', user_type: 'user' },
+    { first_name: 'Emily', last_name: 'Chen', email: 'emily@ttn.com', status: 'pending', user_type: 'user' },
   ];
 
   const roleMap = {
@@ -95,10 +95,17 @@ async function seedUsers() {
           email: u.email,
           password: hashedPassword,
           status: u.status,
+          user_type: u.user_type,
           email_verified_at: u.status === 'approved' ? now : null,
           created_at: now,
           updated_at: now,
         },
+      });
+    } else {
+      // Update existing user with correct user_type
+      await prisma.users.update({
+        where: { email: u.email },
+        data: { user_type: u.user_type },
       });
     }
 
@@ -113,7 +120,7 @@ async function seedUsers() {
       } catch { /* Already exists */ }
     }
   }
-  console.log('  Users seeded (7) + roles assigned');
+  console.log('  Users seeded (7) + roles assigned + user_type set');
 }
 
 async function seedLocations() {

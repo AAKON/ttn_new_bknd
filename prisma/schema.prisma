@@ -722,6 +722,7 @@ model users {
   email_verified_at                                        DateTime?                  @db.Timestamp(0)
   password                                                 String                     @db.VarChar(255)
   status                                                   users_status               @default(pending)
+  user_type                                                users_user_type            @default(user)
   remember_token                                           String?                    @db.VarChar(100)
   deleted_at                                               DateTime?                  @db.Timestamp(0)
   created_at                                               DateTime?                  @db.Timestamp(0)
@@ -799,6 +800,11 @@ enum users_status {
   pending
   approved
   rejected
+}
+
+enum users_user_type {
+  user
+  admin_user
 }
 
 enum sourcing_proposals_payment_method {
