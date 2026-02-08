@@ -55,6 +55,11 @@ const authenticate = async (req, res, next) => {
       return unauthorized(res, 'Account is banned');
     }
 
+    // Use JWT roles if available (faster), otherwise fall back to database query
+    if (decoded.roles && Array.isArray(decoded.roles)) {
+      user.roles = decoded.roles.map(roleName => ({ name: roleName }));
+    }
+
     req.user = user;
     next();
   } catch (err) {

@@ -6,9 +6,13 @@ const { jwtSecret, jwtExpiresIn, bcryptRounds } = require('../config/auth');
 const { getMediaForModel } = require('./media.service');
 const { sendOTPEmail } = require('./email.service');
 
-const generateToken = (user) => {
+const generateToken = (user, roles = []) => {
   return jwt.sign(
-    { id: Number(user.id), email: user.email },
+    {
+      id: Number(user.id),
+      email: user.email,
+      roles: roles.map(r => typeof r === 'string' ? r : r.name)
+    },
     jwtSecret,
     { expiresIn: jwtExpiresIn }
   );
@@ -43,7 +47,15 @@ const register = async ({ first_name, last_name, email, password, user_type }) =
     await assignRole(user.id, user_type);
   }
 
-  const token = generateToken(user);
+  // Fetch assigned roles
+  const roles = await prisma.$queryRawUnsafe(
+    `SELECT r.name FROM roles r
+     INNER JOIN model_has_roles mhr ON mhr.role_id = r.id
+     WHERE mhr.model_type = 'App\\\\Models\\\\User' AND mhr.model_id = ?`,
+    user.id
+  );
+
+  const token = generateToken(user, roles.map(r => r.name));
 
   return {
     name: `${user.first_name} ${user.last_name}`,
@@ -51,6 +63,7 @@ const register = async ({ first_name, last_name, email, password, user_type }) =
     profile_picture: null,
     token_type: 'Bearer',
     access_token: token,
+    roles: roles.map(r => r.name),
   };
 };
 
@@ -69,8 +82,6 @@ const login = async ({ email, password }) => {
     throw { statusCode: 401, message: 'Invalid login credentials' };
   }
 
-  const token = generateToken(user);
-
   // Get profile picture
   const media = await getMediaForModel('App\\Models\\User', user.id, 'profile_picture');
   const profilePic = media.length > 0 ? media[0].url : null;
@@ -82,6 +93,8 @@ const login = async ({ email, password }) => {
      WHERE mhr.model_type = 'App\\\\Models\\\\User' AND mhr.model_id = ?`,
     user.id
   );
+
+  const token = generateToken(user, roles.map(r => r.name));
 
   return {
     name: `${user.first_name} ${user.last_name}`,
@@ -118,8 +131,6 @@ const googleLogin = async ({ email, token: googleToken }) => {
     throw { statusCode: 403, message: 'Your account has been banned' };
   }
 
-  const jwtToken = generateToken(user);
-
   const media = await getMediaForModel('App\\Models\\User', user.id, 'profile_picture');
   const profilePic = media.length > 0 ? media[0].url : null;
 
@@ -130,6 +141,8 @@ const googleLogin = async ({ email, token: googleToken }) => {
      WHERE mhr.model_type = 'App\\\\Models\\\\User' AND mhr.model_id = ?`,
     user.id
   );
+
+  const jwtToken = generateToken(user, roles.map(r => r.name));
 
   return {
     name: `${user.first_name} ${user.last_name}`,

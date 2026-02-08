@@ -8,6 +8,7 @@ const authenticate = require('../middleware/auth');
 
 // Public endpoints (no auth)
 router.get('/business-categories', publicController.getBusinessCategories);
+router.get('/locations', publicController.getLocations);
 router.get('/homepage', publicController.getHomepage);
 router.get('/about', publicController.getAbout);
 router.get('/team', publicController.getTeam);

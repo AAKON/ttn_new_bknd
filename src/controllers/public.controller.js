@@ -197,6 +197,25 @@ const getPartners = async (req, res, next) => {
   }
 };
 
+const getLocations = async (req, res, next) => {
+  try {
+    const locations = await prisma.locations.findMany({
+      orderBy: { name: 'asc' },
+    });
+
+    const result = locations.map((loc) => ({
+      id: Number(loc.id),
+      name: loc.name,
+      country_code: loc.country_code,
+      flag_path: loc.flag_path,
+    }));
+
+    return success(res, result, 'Locations fetched successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getBusinessCategories,
   getHomepage,
@@ -205,4 +224,5 @@ module.exports = {
   getTermsAndConditions,
   getPricingList,
   getPartners,
+  getLocations,
 };
