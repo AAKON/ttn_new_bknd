@@ -3,7 +3,11 @@
     "allow": [
       "Bash(npx prisma migrate dev:*)",
       "Bash(npx prisma db push:*)",
-      "Bash(npx prisma studio:*)"
+      "Bash(npx prisma studio:*)",
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)"
     ]
   }
 }

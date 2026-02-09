@@ -183,21 +183,38 @@ const companyDetails = async (req, res, next) => {
       where: { company_id: company.id, deleted_at: null },
     });
 
-    // Get products with media
+    // Get products with media and category
     const products = await prisma.products.findMany({
       where: { company_id: company.id },
+      orderBy: { created_at: 'desc' },
     });
 
     const productsWithMedia = await Promise.all(
       products.map(async (p) => {
         const pMedia = await getMediaForModel('App\\Models\\Product', p.id, 'image');
+
+        // Fetch category separately since there's no relation defined
+        let category = null;
+        if (p.product_category_id) {
+          const cat = await prisma.business_categories.findUnique({
+            where: { id: p.product_category_id },
+          });
+          category = cat ? { id: Number(cat.id), name: cat.name } : null;
+        }
+
         return {
           id: Number(p.id),
+          title: p.name,
           name: p.name,
           price_range: p.price_range,
           price_max: p.price_max,
+          price_usd: p.price_range,
+          price_inr: p.price_max,
           moq: p.moq,
           product_category_id: Number(p.product_category_id),
+          category: category,
+          product_category: category,
+          image: pMedia.length > 0 ? pMedia[0].url : null,
           image_url: pMedia.length > 0 ? pMedia[0].url : null,
         };
       })

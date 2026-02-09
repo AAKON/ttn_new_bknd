@@ -137,7 +137,48 @@ const editCompany = async (req, res, next) => {
     });
 
     const formatted = await formatCompanyListItem(full);
-    return success(res, formatted, 'Company data fetched successfully');
+
+    // Get products separately
+    const products = await prisma.products.findMany({
+      where: { company_id: company.id },
+    });
+
+    // Add products with media and category
+    const productsWithMedia = await Promise.all(
+      products.map(async (p) => {
+        const pMedia = await getMediaForModel('App\\Models\\Product', p.id, 'image');
+        // Get category name
+        let categoryName = null;
+        if (p.product_category_id) {
+          const category = await prisma.business_categories.findUnique({
+            where: { id: p.product_category_id },
+          });
+          categoryName = category?.name || null;
+        }
+
+        return {
+          id: Number(p.id),
+          name: p.name,
+          title: p.name,
+          price_range: p.price_range,
+          price_max: p.price_max,
+          price_usd: p.price_range,
+          price_inr: p.price_max,
+          moq: p.moq,
+          product_category_id: Number(p.product_category_id),
+          category: categoryName
+            ? { id: Number(p.product_category_id), name: categoryName }
+            : null,
+          product_category: categoryName
+            ? { id: Number(p.product_category_id), name: categoryName }
+            : null,
+          image: pMedia.length > 0 ? pMedia[0].url : null,
+          image_url: pMedia.length > 0 ? pMedia[0].url : null,
+        };
+      })
+    );
+
+    return success(res, { ...formatted, products: productsWithMedia }, 'Company data fetched successfully');
   } catch (err) {
     next(err);
   }
@@ -341,14 +382,25 @@ const storeProduct = async (req, res, next) => {
     const company = await verifyCompanyOwnership(req.params.slug, req.user.id);
     if (!company) return notFound(res, 'Company not found');
 
+    // Validate required fields
+    if (!req.body.name) {
+      return error(res, 'Product name is required', 400);
+    }
+    if (!req.body.product_category_id) {
+      return error(res, 'Product category is required', 400);
+    }
+    if (!req.body.moq) {
+      return error(res, 'Minimum order quantity is required', 400);
+    }
+
     const product = await prisma.products.create({
       data: {
         company_id: company.id,
-        name: req.body.name,
+        name: String(req.body.name).trim(),
         product_category_id: BigInt(req.body.product_category_id),
-        price_range: req.body.price_range,
-        price_max: req.body.price_max || null,
-        moq: req.body.moq || null,
+        price_range: String(req.body.price_range || '0').trim(),
+        price_max: req.body.price_max ? String(req.body.price_max).trim() : null,
+        moq: String(req.body.moq || '0').trim(),
         created_by: req.user.id,
         created_at: new Date(),
         updated_at: new Date(),
@@ -361,6 +413,7 @@ const storeProduct = async (req, res, next) => {
 
     return success(res, { id: Number(product.id) }, 'Product created successfully');
   } catch (err) {
+    console.error('Store product error:', err);
     next(err);
   }
 };
