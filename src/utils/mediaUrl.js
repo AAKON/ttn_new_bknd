@@ -11,7 +11,7 @@ const getSpatieMediaUrl = (media) => {
   if (!media) return null;
   // Spatie stores media in storage/app/public/{id}/{file_name}
   // We need to map this to our uploads directory or the original Laravel path
-  const baseUrl = process.env.LARAVEL_URL || process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
+  const baseUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
   if (media.disk === 'public') {
     return `${baseUrl}/storage/${media.id}/${media.file_name}`;
   }

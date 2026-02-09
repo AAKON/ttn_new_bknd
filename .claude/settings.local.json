@@ -7,7 +7,13 @@
       "Bash(dir:*)",
       "Bash(ls:*)",
       "Bash(find:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(node scripts/rehash-passwords.js:*)",
+      "Bash(node -e:*)",
+      "Bash(node scripts/debug-login.js:*)",
+      "Bash(node scripts/test-login-api.js:*)",
+      "Bash(del scriptsdebug-login.js scriptstest-login-api.js)",
+      "Bash(curl:*)"
     ]
   }
 }

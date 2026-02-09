@@ -35,6 +35,7 @@ router.delete('/admin-management/:id', checkPermission(Permissions.ACCESS_MANAGE
 // User management
 router.get('/user-management', checkPermission(Permissions.USER_MANAGEMENT), usersController.getUsers);
 router.delete('/user-management/:id', checkPermission(Permissions.USER_MANAGEMENT), usersController.deleteUser);
+router.put('/user-management/:id/password', checkPermission(Permissions.USER_MANAGEMENT), usersController.updateUserPassword);
 router.post('/user-management/:id/toggle-ban', checkPermission(Permissions.USER_MANAGEMENT), usersController.toggleBan);
 
 // Business categories

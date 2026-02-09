@@ -181,6 +181,28 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+const updateUserPassword = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 8) {
+      return error(res, 'Password must be at least 8 characters', 422);
+    }
+
+    const user = await prisma.users.findUnique({ where: { id: BigInt(req.params.id) } });
+    if (!user) return notFound(res, 'User not found');
+
+    const hashedPassword = await bcrypt.hash(password, bcryptRounds);
+    await prisma.users.update({
+      where: { id: user.id },
+      data: { password: hashedPassword, updated_at: new Date() },
+    });
+
+    return success(res, null, 'User password updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 const toggleBan = async (req, res, next) => {
   try {
     const user = await prisma.users.findUnique({ where: { id: BigInt(req.params.id) } });
@@ -197,4 +219,4 @@ const toggleBan = async (req, res, next) => {
   }
 };
 
-module.exports = { getAdmins, storeAdmin, updateAdmin, deleteAdmin, getUsers, deleteUser, toggleBan };
+module.exports = { getAdmins, storeAdmin, updateAdmin, deleteAdmin, getUsers, deleteUser, updateUserPassword, toggleBan };

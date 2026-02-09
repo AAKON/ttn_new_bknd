@@ -37,7 +37,7 @@ const getMediaForModel = async (modelType, modelId, collectionName = null) => {
 
 const resolveMedia = (media) => {
   if (!media) return null;
-  const baseUrl = process.env.LARAVEL_URL || `http://localhost:8000`;
+  const baseUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
   const url = `${baseUrl}/uploads/${media.file_name}`;
 
   return {
