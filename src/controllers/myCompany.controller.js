@@ -178,7 +178,27 @@ const editCompany = async (req, res, next) => {
       })
     );
 
-    return success(res, { ...formatted, products: productsWithMedia }, 'Company data fetched successfully');
+    // Get overview
+    const overview = await prisma.company_overviews.findFirst({
+      where: { company_id: company.id, deleted_at: null },
+    });
+
+    const overviewData = overview ? {
+      id: Number(overview.id),
+      moq: overview.moq,
+      lead_time: overview.lead_time,
+      lead_time_unit: overview.lead_time_unit,
+      shipment_term: overview.shipment_term,
+      payment_policy: overview.payment_policy,
+      total_units: overview.total_units,
+      production_capacity: overview.production_capacity,
+      production_capacity_unit: overview.production_capacity_unit,
+      market_share: overview.market_share ? JSON.parse(overview.market_share) : [],
+      yearly_turnover: overview.yearly_turnover ? JSON.parse(overview.yearly_turnover) : [],
+      is_manufacturer: overview.is_manufacturer,
+    } : null;
+
+    return success(res, { ...formatted, products: productsWithMedia, overview: overviewData }, 'Company data fetched successfully');
   } catch (err) {
     next(err);
   }
