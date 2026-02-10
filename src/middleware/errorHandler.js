@@ -24,9 +24,10 @@ const errorHandler = (err, req, res, next) => {
   }
 
   if (err.name === 'PrismaClientValidationError') {
+    console.error('Prisma Validation Error:', err.message);
     return res.status(400).json({
       status: false,
-      message: 'Invalid data provided',
+      message: 'Invalid data provided: ' + err.message,
       data: null,
       code: 400,
     });

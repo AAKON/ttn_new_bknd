@@ -133,6 +133,9 @@ const editCompany = async (req, res, next) => {
         company_business_categories: { include: { business_categories: true } },
         company_business_types: { include: { business_types: true } },
         company_certificates: { include: { certificates: true } },
+        business_contacts: { where: { deleted_at: null }, take: 1 },
+        decision_makers: true,
+        company_faqs: { orderBy: { created_at: 'desc' } },
       },
     });
 
@@ -198,7 +201,48 @@ const editCompany = async (req, res, next) => {
       is_manufacturer: overview.is_manufacturer,
     } : null;
 
-    return success(res, { ...formatted, products: productsWithMedia, overview: overviewData }, 'Company data fetched successfully');
+    // Format contact data
+    const contact = full.business_contacts?.[0] ? {
+      id: Number(full.business_contacts[0].id),
+      address: full.business_contacts[0].address,
+      factory_address: full.business_contacts[0].factory_address,
+      email: full.business_contacts[0].email,
+      phone: full.business_contacts[0].phone,
+      phone_code: full.business_contacts[0].phone_code,
+      whatsapp: full.business_contacts[0].whatsapp,
+      whatsapp_code: full.business_contacts[0].whatsapp_code,
+      website: full.business_contacts[0].website,
+      latitude: full.business_contacts[0].latitude,
+      longitude: full.business_contacts[0].longitude,
+    } : null;
+
+    // Format decision makers data
+    const decisionMakers = (full.decision_makers || []).map((dm) => ({
+      id: Number(dm.id),
+      name: dm.name,
+      email: dm.email,
+      phone: dm.phone,
+      phone_code: dm.phone_code,
+      whatsapp: dm.whatsapp,
+      whatsapp_code: dm.whatsapp_code,
+      designation: dm.designation,
+    }));
+
+    // Format FAQs data
+    const faqs = (full.company_faqs || []).map((faq) => ({
+      id: Number(faq.id),
+      question: faq.question,
+      answer: faq.answer,
+    }));
+
+    return success(res, {
+      ...formatted,
+      products: productsWithMedia,
+      overview: overviewData,
+      contact,
+      decision_makers: decisionMakers,
+      faqs
+    }, 'Company data fetched successfully');
   } catch (err) {
     next(err);
   }
@@ -602,8 +646,12 @@ const getContact = async (req, res, next) => {
       factory_address: contact.factory_address,
       email: contact.email,
       phone: contact.phone,
+      phone_code: contact.phone_code,
       whatsapp: contact.whatsapp,
+      whatsapp_code: contact.whatsapp_code,
       website: contact.website,
+      latitude: contact.latitude,
+      longitude: contact.longitude,
       lat_long: contact.lat_long ? JSON.parse(contact.lat_long) : null,
     }, 'Contact fetched');
   } catch (err) {
@@ -616,16 +664,24 @@ const storeOrUpdateContact = async (req, res, next) => {
     const company = await verifyCompanyOwnership(req.params.slug, req.user.id);
     if (!company) return notFound(res, 'Company not found');
 
+    console.log('Contact save request body:', req.body);
+
     const data = {
       address: req.body.address || null,
       factory_address: req.body.factory_address || null,
-      email: req.body.email,
+      email: req.body.email || null,
       phone: req.body.phone || null,
+      phone_code: req.body.phone_code || null,
       whatsapp: req.body.whatsapp || null,
+      whatsapp_code: req.body.whatsapp_code || null,
       website: req.body.website || null,
+      latitude: req.body.latitude || null,
+      longitude: req.body.longitude || null,
       lat_long: req.body.lat_long ? JSON.stringify(req.body.lat_long) : null,
       updated_at: new Date(),
     };
+
+    console.log('Data to save:', data);
 
     const existing = await prisma.business_contacts.findFirst({
       where: { company_id: company.id, deleted_at: null },
@@ -661,7 +717,9 @@ const getDecisionMakers = async (req, res, next) => {
       name: m.name,
       email: m.email,
       phone: m.phone,
+      phone_code: m.phone_code,
       whatsapp: m.whatsapp,
+      whatsapp_code: m.whatsapp_code,
       designation: m.designation,
     })), 'Decision makers fetched');
   } catch (err) {
@@ -679,8 +737,10 @@ const storeDecisionMaker = async (req, res, next) => {
         company_id: company.id,
         name: req.body.name,
         email: req.body.email,
-        whatsapp: req.body.whatsapp || null,
         phone: req.body.phone || null,
+        phone_code: req.body.phone_code || null,
+        whatsapp: req.body.whatsapp || null,
+        whatsapp_code: req.body.whatsapp_code || null,
         designation: req.body.designation,
         created_at: new Date(),
         updated_at: new Date(),
@@ -701,8 +761,10 @@ const updateDecisionMaker = async (req, res, next) => {
     const updateData = { updated_at: new Date() };
     if (req.body.name) updateData.name = req.body.name;
     if (req.body.email) updateData.email = req.body.email;
-    if (req.body.whatsapp !== undefined) updateData.whatsapp = req.body.whatsapp;
     if (req.body.phone !== undefined) updateData.phone = req.body.phone;
+    if (req.body.phone_code !== undefined) updateData.phone_code = req.body.phone_code;
+    if (req.body.whatsapp !== undefined) updateData.whatsapp = req.body.whatsapp;
+    if (req.body.whatsapp_code !== undefined) updateData.whatsapp_code = req.body.whatsapp_code;
     if (req.body.designation) updateData.designation = req.body.designation;
 
     await prisma.decision_makers.update({
@@ -723,6 +785,49 @@ const deleteDecisionMaker = async (req, res, next) => {
 
     await prisma.decision_makers.delete({ where: { id: BigInt(req.params.decision_maker_id) } });
     return success(res, null, 'Decision maker deleted successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Bulk save decision makers - Replace all with new data
+const bulkSaveDecisionMakers = async (req, res, next) => {
+  try {
+    const company = await verifyCompanyOwnership(req.params.slug, req.user.id);
+    if (!company) return notFound(res, 'Company not found');
+
+    const { decision_makers } = req.body;
+
+    if (!Array.isArray(decision_makers)) {
+      return error(res, 'Invalid data provided', 400);
+    }
+
+    console.log('Bulk save decision makers - replacing all:', decision_makers);
+
+    // Delete all existing decision makers for this company
+    await prisma.decision_makers.deleteMany({
+      where: { company_id: company.id },
+    });
+
+    // Create new decision makers if provided
+    if (decision_makers.length > 0) {
+      await prisma.decision_makers.createMany({
+        data: decision_makers.map(dm => ({
+          company_id: company.id,
+          name: dm.name,
+          email: dm.email || null,
+          phone: dm.phone || null,
+          phone_code: dm.phone_code || null,
+          whatsapp: dm.whatsapp || null,
+          whatsapp_code: dm.whatsapp_code || null,
+          designation: dm.designation,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })),
+      });
+    }
+
+    return success(res, null, 'Decision makers saved successfully');
   } catch (err) {
     next(err);
   }
@@ -792,6 +897,7 @@ module.exports = {
   getContact,
   storeOrUpdateContact,
   getDecisionMakers,
+  bulkSaveDecisionMakers,
   storeDecisionMaker,
   updateDecisionMaker,
   deleteDecisionMaker,

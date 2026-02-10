@@ -13,7 +13,8 @@
       "Bash(node scripts/debug-login.js:*)",
       "Bash(node scripts/test-login-api.js:*)",
       "Bash(del scriptsdebug-login.js scriptstest-login-api.js)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

@@ -50,6 +50,7 @@ router.post('/my/company/:slug/contact/store-or-update', authenticate, myCompany
 
 // Decision Makers
 router.get('/my/company/:slug/decision-maker', authenticate, myCompanyController.getDecisionMakers);
+router.post('/my/company/:slug/decision-makers', authenticate, myCompanyController.bulkSaveDecisionMakers);
 router.post('/my/company/:slug/decision-maker/store', authenticate, myCompanyController.storeDecisionMaker);
 router.post('/my/company/:slug/decision-maker/:decision_maker_id/update', authenticate, myCompanyController.updateDecisionMaker);
 router.get('/my/company/:slug/decision-maker/:decision_maker_id/delete', authenticate, myCompanyController.deleteDecisionMaker);
