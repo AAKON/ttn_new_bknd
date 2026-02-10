@@ -3,7 +3,7 @@ const { success, error, notFound, forbidden } = require('../utils/response');
 const { getMediaForModel, addMedia, deleteMedia } = require('../services/media.service');
 const { getPaginationParams } = require('../utils/pagination');
 
-const formatProposal = async (proposal, userId = null) => {
+const formatProposal = async (proposal, userId = null, req = null) => {
   const media = await getMediaForModel('App\\Models\\SourcingProposal', proposal.id, 'proposal_images');
 
   let isFavorited = false;
@@ -25,6 +25,8 @@ const formatProposal = async (proposal, userId = null) => {
       where: { id: { in: categoryIds } },
     });
   }
+
+  const baseUrl = req ? `${req.protocol}://${req.get('host')}/flag` : '/flag';
 
   return {
     id: Number(proposal.id),
@@ -59,7 +61,8 @@ const formatProposal = async (proposal, userId = null) => {
           id: Number(proposal.locations.id),
           name: proposal.locations.name,
           country_code: proposal.locations.country_code,
-          flag_path: proposal.locations.flag_path,
+          phone_code: proposal.locations.phone_code,
+          flag_path: proposal.locations.flag_path ? `${baseUrl}/${proposal.locations.flag_path}` : null,
         }
       : null,
     product_categories: productCategories.map((pc) => ({ id: Number(pc.id), name: pc.name })),
@@ -123,7 +126,7 @@ const publicList = async (req, res, next) => {
     ]);
 
     const userId = req.user?.id || null;
-    const result = await Promise.all(proposals.map((p) => formatProposal(p, userId)));
+    const result = await Promise.all(proposals.map((p) => formatProposal(p, userId, req)));
 
     return success(res, {
       data: result,
@@ -164,7 +167,7 @@ const show = async (req, res, next) => {
     if (!proposal) return notFound(res, 'Proposal not found');
 
     const userId = req.user?.id || null;
-    const formatted = await formatProposal(proposal, userId);
+    const formatted = await formatProposal(proposal, userId, req);
 
     // Format comments
     formatted.comments = proposal.proposal_comments.map((c) => ({
@@ -205,7 +208,7 @@ const myProposals = async (req, res, next) => {
       orderBy: { created_at: 'desc' },
     });
 
-    const result = await Promise.all(proposals.map((p) => formatProposal(p)));
+    const result = await Promise.all(proposals.map((p) => formatProposal(p, null, req)));
 
     return success(res, { data: result }, 'My proposals fetched');
   } catch (err) {
@@ -347,11 +350,18 @@ const getFilterOptions = async (req, res, next) => {
       prisma.product_categories.findMany({ orderBy: { name: 'asc' } }),
     ]);
 
+    const baseUrl = `${req.protocol}://${req.get('host')}/flag`;
     const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR', 'BDT', 'AUD', 'CAD', 'CHF'];
     const priceRanges = ['0-100', '100-500', '500-1000', '1000-5000', '5000-10000', '10000+'];
 
     return success(res, {
-      locations: locations.map((l) => ({ id: Number(l.id), name: l.name, country_code: l.country_code, flag_path: l.flag_path })),
+      locations: locations.map((l) => ({
+        id: Number(l.id),
+        name: l.name,
+        country_code: l.country_code,
+        phone_code: l.phone_code,
+        flag_path: l.flag_path ? `${baseUrl}/${l.flag_path}` : null,
+      })),
       product_categories: productCategories.map((pc) => ({ id: Number(pc.id), name: pc.name })),
       currencies,
       price_ranges: priceRanges,

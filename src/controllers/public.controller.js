@@ -48,6 +48,8 @@ const getHomepage = async (req, res, next) => {
       take: 8,
     });
 
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
     const companiesWithMedia = await Promise.all(
       featuredCompanies.map(async (c) => {
         const media = await getMediaForModel('App\\Models\\Company', c.id, 'profile_pic');
@@ -56,7 +58,13 @@ const getHomepage = async (req, res, next) => {
           name: c.name,
           slug: c.slug,
           moto: c.moto,
-          location: c.locations ? { id: Number(c.locations.id), name: c.locations.name, country_code: c.locations.country_code, flag_path: c.locations.flag_path } : null,
+          location: c.locations ? {
+            id: Number(c.locations.id),
+            name: c.locations.name,
+            country_code: c.locations.country_code,
+            phone_code: c.locations.phone_code,
+            flag_path: c.locations.flag_path ? `${baseUrl}/${c.locations.flag_path}` : null
+          } : null,
           business_category: c.business_categories ? { id: Number(c.business_categories.id), name: c.business_categories.name } : null,
           profile_pic_url: media.length > 0 ? media[0].url : null,
           thumbnail_url: media.length > 0 ? media[0].url : null,
@@ -203,11 +211,14 @@ const getLocations = async (req, res, next) => {
       orderBy: { name: 'asc' },
     });
 
+    const baseUrl = `${req.protocol}://${req.get('host')}/flag`;
+
     const result = locations.map((loc) => ({
       id: Number(loc.id),
       name: loc.name,
       country_code: loc.country_code,
-      flag_path: loc.flag_path,
+      phone_code: loc.phone_code,
+      flag_path: loc.flag_path ? `${baseUrl}/${loc.flag_path}` : null,
     }));
 
     return success(res, result, 'Locations fetched successfully');

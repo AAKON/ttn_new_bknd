@@ -27,7 +27,7 @@ const myCompanyList = async (req, res, next) => {
       orderBy: { created_at: 'desc' },
     });
 
-    const result = await Promise.all(companies.map((c) => formatCompanyListItem(c)));
+    const result = await Promise.all(companies.map((c) => formatCompanyListItem(c, null, req)));
     return success(res, result, 'Companies fetched successfully');
   } catch (err) {
     next(err);
@@ -136,7 +136,7 @@ const editCompany = async (req, res, next) => {
       },
     });
 
-    const formatted = await formatCompanyListItem(full);
+    const formatted = await formatCompanyListItem(full, null, req);
 
     // Get products separately
     const products = await prisma.products.findMany({
@@ -738,8 +738,16 @@ const getPreparationDataForBasic = async (req, res, next) => {
       prisma.certificates.findMany({ orderBy: { name: 'asc' } }),
     ]);
 
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
     return success(res, {
-      locations: locations.map((l) => ({ id: Number(l.id), name: l.name, country_code: l.country_code, flag_path: l.flag_path })),
+      locations: locations.map((l) => ({
+        id: Number(l.id),
+        name: l.name,
+        country_code: l.country_code,
+        phone_code: l.phone_code,
+        flag_path: l.flag_path ? `${baseUrl}/${l.flag_path}` : null,
+      })),
       business_categories: businessCategories.map((bc) => ({ id: Number(bc.id), name: bc.name })),
       business_types: businessTypes.map((bt) => ({ id: Number(bt.id), name: bt.name })),
       certificates: certificates.map((c) => ({ id: Number(c.id), name: c.name })),

@@ -30,6 +30,7 @@ app.use(cookieParser());
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/storage', express.static(path.join(__dirname, 'storage')));
+app.use('/flag', express.static(path.join(__dirname, 'flag')));
 
 // API Routes
 app.use('/api', routes);

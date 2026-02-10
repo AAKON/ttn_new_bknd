@@ -3,7 +3,7 @@ const { success, error, notFound } = require('../utils/response');
 const { getMediaForModel } = require('../services/media.service');
 const { getPaginationParams } = require('../utils/pagination');
 
-const formatCompanyListItem = async (company, userId = null) => {
+const formatCompanyListItem = async (company, userId = null, req = null) => {
   const media = await getMediaForModel('App\\Models\\Company', company.id, 'profile_pic');
 
   // Check if favorited
@@ -14,6 +14,8 @@ const formatCompanyListItem = async (company, userId = null) => {
     });
     isFavorite = !!fav;
   }
+
+  const baseUrl = req ? `${req.protocol}://${req.get('host')}` : '';
 
   return {
     id: Number(company.id),
@@ -34,7 +36,8 @@ const formatCompanyListItem = async (company, userId = null) => {
           id: Number(company.locations.id),
           name: company.locations.name,
           country_code: company.locations.country_code,
-          flag_path: company.locations.flag_path,
+          phone_code: company.locations.phone_code,
+          flag_path: company.locations.flag_path ? `${baseUrl}/${company.locations.flag_path}` : null,
         }
       : null,
     business_category: company.business_categories
@@ -120,7 +123,7 @@ const companyList = async (req, res, next) => {
     ]);
 
     const userId = req.user?.id || null;
-    const result = await Promise.all(companies.map((c) => formatCompanyListItem(c, userId)));
+    const result = await Promise.all(companies.map((c) => formatCompanyListItem(c, userId, req)));
 
     return success(res, {
       data: result,
@@ -145,8 +148,16 @@ const getFilterOptions = async (req, res, next) => {
       prisma.certificates.findMany({ orderBy: { name: 'asc' } }),
     ]);
 
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
     return success(res, {
-      locations: locations.map((l) => ({ id: Number(l.id), name: l.name, country_code: l.country_code, flag_path: l.flag_path })),
+      locations: locations.map((l) => ({
+        id: Number(l.id),
+        name: l.name,
+        country_code: l.country_code,
+        phone_code: l.phone_code,
+        flag_path: l.flag_path ? `${baseUrl}/${l.flag_path}` : null,
+      })),
       business_categories: businessCategories.map((bc) => ({ id: Number(bc.id), name: bc.name })),
       business_types: businessTypes.map((bt) => ({ id: Number(bt.id), name: bt.name })),
       certificates: certificates.map((c) => ({ id: Number(c.id), name: c.name })),
@@ -176,7 +187,7 @@ const companyDetails = async (req, res, next) => {
     if (!company) return notFound(res, 'Company not found');
 
     const userId = req.user?.id || null;
-    const formatted = await formatCompanyListItem(company, userId);
+    const formatted = await formatCompanyListItem(company, userId, req);
 
     // Get overview
     const overview = await prisma.company_overviews.findFirst({
