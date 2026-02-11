@@ -41,10 +41,10 @@ const resolveMedia = (media) => {
   const url = `${baseUrl}/uploads/${media.file_name}`;
 
   return {
-    id: media.id,
+    id: Number(media.id),
     file_name: media.file_name,
     mime_type: media.mime_type,
-    size: media.size,
+    size: Number(media.size),
     url,
     original_url: url,
     preview_url: url,

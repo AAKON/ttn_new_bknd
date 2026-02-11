@@ -695,6 +695,7 @@ model sourcing_proposals {
   email                                       String?                           @db.VarChar(255)
   phone                                       String?                           @db.VarChar(255)
   whatsapp                                    String?                           @db.VarChar(255)
+  address                                     String?                           @db.Text
   status                                      sourcing_proposals_status         @default(pending)
   admin_notes                                 String?                           @db.Text
   approved_by                                 BigInt?                           @db.UnsignedBigInt

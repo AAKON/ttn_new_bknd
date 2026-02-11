@@ -43,6 +43,7 @@ const formatProposal = async (proposal, userId = null, req = null) => {
     email: proposal.email,
     phone: proposal.phone,
     whatsapp: proposal.whatsapp,
+    address: proposal.address,
     status: proposal.status,
     view_count: proposal.view_count,
     admin_notes: proposal.admin_notes,
@@ -233,6 +234,7 @@ const store = async (req, res, next) => {
       email: req.body.email || null,
       phone: req.body.phone || null,
       whatsapp: req.body.whatsapp || null,
+      address: req.body.address || null,
       location_id: req.body.location_id ? BigInt(req.body.location_id) : null,
       status: 'pending',
       created_at: new Date(),
@@ -275,7 +277,7 @@ const update = async (req, res, next) => {
     if (!proposal) return notFound(res, 'Proposal not found');
 
     const updateData = { updated_at: new Date() };
-    const fields = ['title', 'description', 'delivery_info', 'company_name', 'company_slug', 'email', 'phone', 'whatsapp', 'payment_method', 'unit', 'currency'];
+    const fields = ['title', 'description', 'delivery_info', 'company_name', 'company_slug', 'email', 'phone', 'whatsapp', 'address', 'payment_method', 'unit', 'currency'];
     fields.forEach((f) => { if (req.body[f] !== undefined) updateData[f] = req.body[f] || null; });
     if (req.body.quantity !== undefined) updateData.quantity = req.body.quantity ? parseFloat(req.body.quantity) : null;
     if (req.body.price !== undefined) updateData.price = req.body.price ? parseFloat(req.body.price) : null;
