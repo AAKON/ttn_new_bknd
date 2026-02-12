@@ -37,14 +37,14 @@ const getHomepage = async (req, res, next) => {
       prisma.business_categories.count({ where: { deleted_at: null } }),
     ]);
 
-    // Featured companies
+    // Recently updated / added companies for homepage
     const featuredCompanies = await prisma.companies.findMany({
       where: { is_active: true, deleted_at: null },
       include: {
         locations: true,
         business_categories: true,
       },
-      orderBy: { view_count: 'desc' },
+      orderBy: { updated_at: 'desc' },
       take: 8,
     });
 
@@ -94,16 +94,38 @@ const getHomepage = async (req, res, next) => {
       })
     );
 
-    return success(res, {
-      counts: {
-        companies: companyCount,
-        sourcing_proposals: proposalCount,
-        locations: locationCount,
-        business_categories: categoryCount,
+    // Business ads for homepage slider
+    const businessAds = await prisma.business_ads.findMany({
+      orderBy: { created_at: 'desc' },
+      take: 6,
+    });
+
+    const businessAdsWithMedia = await Promise.all(
+      businessAds.map(async (ad) => {
+        const media = await getMediaForModel('App\\Models\\BusinessAd', ad.id, 'default');
+        return {
+          id: Number(ad.id),
+          link: ad.link,
+          image: media.length > 0 ? media[0].url : null,
+        };
+      })
+    );
+
+    return success(
+      res,
+      {
+        counts: {
+          companies: companyCount,
+          sourcing_proposals: proposalCount,
+          locations: locationCount,
+          business_categories: categoryCount,
+        },
+        featured_companies: companiesWithMedia,
+        featured_blogs: blogsWithMedia,
+        web_ads: businessAdsWithMedia,
       },
-      featured_companies: companiesWithMedia,
-      featured_blogs: blogsWithMedia,
-    }, 'Homepage data fetched successfully');
+      'Homepage data fetched successfully'
+    );
   } catch (err) {
     next(err);
   }
@@ -211,7 +233,8 @@ const getLocations = async (req, res, next) => {
       orderBy: { name: 'asc' },
     });
 
-    const baseUrl = `${req.protocol}://${req.get('host')}/flag`;
+    // Base URL for assets (flag_path already includes "flag/..." from DB)
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
 
     const result = locations.map((loc) => ({
       id: Number(loc.id),

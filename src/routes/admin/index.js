@@ -62,6 +62,11 @@ router.post('/product-categories', checkPermission(Permissions.COMPANY_EDIT), re
 router.put('/product-categories/:id', checkPermission(Permissions.COMPANY_EDIT), resourcesController.updateProductCategory);
 router.delete('/product-categories/:id', checkPermission(Permissions.COMPANY_EDIT), resourcesController.deleteProductCategory);
 
+// Companies
+router.get('/companies', checkPermission(Permissions.COMPANY_VIEW), resourcesController.getAdminCompanies);
+router.post('/companies/:id/toggle-active', checkPermission(Permissions.COMPANY_EDIT), resourcesController.toggleCompanyActive);
+router.delete('/companies/:id', checkPermission(Permissions.COMPANY_EDIT), resourcesController.deleteAdminCompany);
+
 // Blogs
 router.get('/blogs', checkPermission(Permissions.BLOG_VIEW), resourcesController.getBlogs);
 router.get('/blogs/:id', checkPermission(Permissions.BLOG_VIEW), resourcesController.showBlog);

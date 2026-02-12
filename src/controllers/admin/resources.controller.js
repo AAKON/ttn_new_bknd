@@ -199,14 +199,28 @@ const showBlog = async (req, res, next) => {
 const storeBlog = async (req, res, next) => {
   try {
     const slug = await generateUniqueSlug(req.body.title, 'blogs');
+
+    // Normalize boolean from form-data (\"true\"/\"false\" or \"1\"/\"0\")
+    const isFeatured =
+      req.body.is_featured === true ||
+      req.body.is_featured === 'true' ||
+      req.body.is_featured === 1 ||
+      req.body.is_featured === '1';
+
     const blog = await prisma.blogs.create({
       data: {
-        title: req.body.title, slug, author: req.body.author || null,
-        short_description: req.body.short_description, content: req.body.content,
-        status: req.body.status || 'draft', is_featured: req.body.is_featured || false,
+        title: req.body.title,
+        slug,
+        author: req.body.author || null,
+        short_description: req.body.short_description,
+        content: req.body.content,
+        status: req.body.status || 'draft',
+        is_featured: isFeatured,
         meta_title: req.body.meta_title || req.body.title,
         meta_description: req.body.meta_description || req.body.short_description,
-        meta_keywords: req.body.meta_keywords || '', created_at: new Date(), updated_at: new Date(),
+        meta_keywords: req.body.meta_keywords || '',
+        created_at: new Date(),
+        updated_at: new Date(),
       },
     });
 
@@ -225,12 +239,21 @@ const storeBlog = async (req, res, next) => {
 const updateBlog = async (req, res, next) => {
   try {
     const updateData = { updated_at: new Date() };
-    if (req.body.title) { updateData.title = req.body.title; updateData.slug = await generateUniqueSlug(req.body.title, 'blogs', BigInt(req.params.id)); }
+    if (req.body.title) {
+      updateData.title = req.body.title;
+      updateData.slug = await generateUniqueSlug(req.body.title, 'blogs', BigInt(req.params.id));
+    }
     if (req.body.author !== undefined) updateData.author = req.body.author;
     if (req.body.short_description) updateData.short_description = req.body.short_description;
     if (req.body.content) updateData.content = req.body.content;
     if (req.body.status) updateData.status = req.body.status;
-    if (req.body.is_featured !== undefined) updateData.is_featured = req.body.is_featured;
+    if (req.body.is_featured !== undefined) {
+      updateData.is_featured =
+        req.body.is_featured === true ||
+        req.body.is_featured === 'true' ||
+        req.body.is_featured === 1 ||
+        req.body.is_featured === '1';
+    }
     if (req.body.meta_title) updateData.meta_title = req.body.meta_title;
     if (req.body.meta_description) updateData.meta_description = req.body.meta_description;
     if (req.body.meta_keywords) updateData.meta_keywords = req.body.meta_keywords;
@@ -554,8 +577,24 @@ const getCompanyReports = async (req, res, next) => {
       prisma.company_reports.findMany({ orderBy: { created_at: 'desc' }, skip: (page - 1) * perPage, take: perPage, include: { companies: { select: { id: true, name: true, slug: true } } } }),
       prisma.company_reports.count(),
     ]);
-    return success(res, { data: items.map((i) => ({ ...i, id: Number(i.id), company_id: Number(i.company_id), company: i.companies ? { id: Number(i.companies.id), name: i.companies.name, slug: i.companies.slug } : null })), pagination: { current_page: page, last_page: Math.ceil(total / perPage), total, per_page: perPage } });
-  } catch (err) { next(err); }
+    return success(res, {
+      data: items.map((i) => ({
+        id: Number(i.id),
+        company_id: Number(i.company_id),
+        name: i.name,
+        email: i.email,
+        phone: i.phone,
+        message: i.message,
+        reason: i.message,
+        company_name: i.companies?.name || null,
+        created_at: i.created_at,
+        company: i.companies ? { id: Number(i.companies.id), name: i.companies.name, slug: i.companies.slug } : null,
+      })),
+      pagination: { current_page: page, last_page: Math.ceil(total / perPage), total, per_page: perPage },
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 const deleteCompanyReport = async (req, res, next) => {
@@ -637,6 +676,107 @@ const getNewsletters = async (req, res, next) => {
     ]);
     return success(res, { data: items.map((i) => ({ id: Number(i.id), email: i.email, created_at: i.created_at })), pagination: { current_page: page, last_page: Math.ceil(total / perPage), total, per_page: perPage } });
   } catch (err) { next(err); }
+};
+
+// ===== Companies (Admin) =====
+const getAdminCompanies = async (req, res, next) => {
+  try {
+    const { page, perPage } = getPaginationParams(req.query);
+    const where = { deleted_at: null };
+
+    if (req.query.search) {
+      where.name = { contains: req.query.search, mode: 'insensitive' };
+    }
+    if (req.query.status) {
+      where.status = req.query.status;
+    }
+    if (req.query.is_active === '1') where.is_active = true;
+    if (req.query.is_active === '0') where.is_active = false;
+
+    const [items, total] = await Promise.all([
+      prisma.companies.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+        include: {
+          locations: true,
+          business_categories: true,
+        },
+      }),
+      prisma.companies.count({ where }),
+    ]);
+
+    const result = await Promise.all(
+      items.map(async (c) => {
+        const media = await getMediaForModel('App\\Models\\Company', c.id, 'profile_pic');
+        return {
+          id: Number(c.id),
+          name: c.name,
+          slug: c.slug,
+          status: c.status,
+          is_active: c.is_active,
+          created_at: c.created_at,
+          location: c.locations
+            ? {
+                id: Number(c.locations.id),
+                name: c.locations.name,
+              }
+            : null,
+          business_category: c.business_categories
+            ? {
+                id: Number(c.business_categories.id),
+                name: c.business_categories.name,
+              }
+            : null,
+          profile_pic_url: media.length > 0 ? media[0].url : null,
+        };
+      })
+    );
+
+    return success(res, {
+      data: result,
+      pagination: {
+        current_page: page,
+        last_page: Math.ceil(total / perPage),
+        total,
+        per_page: perPage,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const toggleCompanyActive = async (req, res, next) => {
+  try {
+    const company = await prisma.companies.findUnique({
+      where: { id: BigInt(req.params.id) },
+      select: { is_active: true },
+    });
+    if (!company) return notFound(res, 'Company not found');
+
+    await prisma.companies.update({
+      where: { id: BigInt(req.params.id) },
+      data: { is_active: !company.is_active, updated_at: new Date() },
+    });
+
+    return success(res, null, 'Status updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteAdminCompany = async (req, res, next) => {
+  try {
+    await prisma.companies.update({
+      where: { id: BigInt(req.params.id) },
+      data: { deleted_at: new Date(), is_active: false, updated_at: new Date() },
+    });
+    return success(res, null, 'Deleted successfully');
+  } catch (err) {
+    next(err);
+  }
 };
 
 const deleteNewsletter = async (req, res, next) => {
@@ -753,6 +893,7 @@ module.exports = {
   getCompanyEmails, updateCompanyEmail, deleteCompanyEmail,
   getCompanyClaims, updateClaimStatus,
   getNewsletters, deleteNewsletter,
+  getAdminCompanies, toggleCompanyActive, deleteAdminCompany,
   getSiteSettings, updateSiteSettings,
   getAdminProposals, approveProposal, rejectProposal, deleteAdminProposal,
 };

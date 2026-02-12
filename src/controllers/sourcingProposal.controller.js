@@ -26,7 +26,8 @@ const formatProposal = async (proposal, userId = null, req = null) => {
     });
   }
 
-  const baseUrl = req ? `${req.protocol}://${req.get('host')}/flag` : '/flag';
+  // Base URL for assets (flag_path already includes "flag/..." from DB)
+  const baseUrl = req ? `${req.protocol}://${req.get('host')}` : '';
 
   return {
     id: Number(proposal.id),
@@ -352,7 +353,8 @@ const getFilterOptions = async (req, res, next) => {
       prisma.product_categories.findMany({ orderBy: { name: 'asc' } }),
     ]);
 
-    const baseUrl = `${req.protocol}://${req.get('host')}/flag`;
+    // Base URL for assets (flag_path already includes "flag/..." from DB)
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR', 'BDT', 'AUD', 'CAD', 'CHF'];
     const priceRanges = ['0-100', '100-500', '500-1000', '1000-5000', '5000-10000', '10000+'];
 
