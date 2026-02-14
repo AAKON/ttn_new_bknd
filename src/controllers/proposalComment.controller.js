@@ -1,9 +1,14 @@
 const prisma = require('../config/database');
-const { success, error, notFound, forbidden } = require('../utils/response');
+const { success, error, notFound } = require('../utils/response');
 const { emitNewComment } = require('../services/socket.service');
 
 const addComment = async (req, res, next) => {
   try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const raw = body.comment ?? body.message ?? body.content ?? body.text ?? '';
+    const commentText = typeof raw === 'string' ? raw.trim() : '';
+    if (!commentText) return error(res, 'Comment text is required', 400);
+
     const proposal = await prisma.sourcing_proposals.findFirst({
       where: { id: BigInt(req.params.proposalId), deleted_at: null },
     });
@@ -13,7 +18,7 @@ const addComment = async (req, res, next) => {
       data: {
         sourcing_proposal_id: proposal.id,
         user_id: req.user.id,
-        comment: req.body.comment,
+        comment: commentText,
         created_at: new Date(),
         updated_at: new Date(),
       },
